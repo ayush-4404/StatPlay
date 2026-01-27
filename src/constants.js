@@ -1,1 +1,1 @@
-export const DB_NAME = "cricuiz"
+export const DB_NAME = "StatPlay"

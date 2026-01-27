@@ -3,7 +3,7 @@ const {DB_NAME} = require("../constants");
 
 const connectDB = async ()=>{
     try{
-        await mongoose.connect(`${process.env.MONGODB_URI}/${DB_NAME}`)
+        await mongoose.connect(`${process.env.MONGODB_URI}`)
         // await mongoose.connect(`/${DB_NAME}`)
     } catch (error){
         console.error("MongoDB connection ERROR : ", error);

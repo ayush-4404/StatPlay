@@ -4,7 +4,20 @@ const ApiError = require("../utils/ApiError");
 const uploadOnCloudinary = require("../utils/FileUpload");
 const ApiResponse = require("../utils/ApiResponse")
 
-const registerUser = asyncHandler(async (req, res) => {
+const generateTokens = async(userId)=>{
+    try{
+        const user = await userModel.findById(userId)
+        const accessToken =await user.generateAccessToken()
+        const refreshToken = await user.generateRefreshToken()
+        user.refreshToken = refreshToken;
+        await user.save({validateBeforeSave : false})
+        return {accessToken, refreshToken}
+    }catch(err){
+        throw new ApiError(500, "Something went wrong while generating tokens")
+    }
+}
+
+module.exports.registerUser = asyncHandler(async (req, res) => {
     let { name, username, email, password } = req.body;
 
     if (
@@ -60,30 +73,115 @@ const registerUser = asyncHandler(async (req, res) => {
     }
     const profilePicture = await uploadOnCloudinary(picture.path);
 
-    if(!profilePicture?.url){
+    if (!profilePicture?.url) {
         throw new ApiError(500, "Profile photo upload failed");
     }
 
     let user = await userModel.create({
         name,
-        username : normalizedUsername,
-        email : normalizedEmail,
+        username: normalizedUsername,
+        email: normalizedEmail,
         password,
-        photo : profilePicture.url
+        photo: profilePicture.secure_url
 
     })
 
     const createdUser = await userModel.findById(user._id).select(
         "-password -refreshToken"
     )
-    if(!createdUser){
+    if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registering the user")
     }
 
     return res.status(201).json(
-        new ApiResponse(200,createdUser,"user registered successfully")
+        new ApiResponse(200, createdUser, "user registered successfully")
     )
 
 })
 
-module.exports = registerUser
+
+module.exports.loginUser = asyncHandler(async (req, res) => {
+    let { email,username, password } = req.body;
+    if(!(email || username)){
+        throw new ApiError(400, "username or email is required")
+    }
+    const normalizedEmail = email.toLowerCase();
+    const normalizedUsername = username.toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(normalizedEmail)) {
+        throw new ApiError(400, "Invalid email format");
+    }
+    const user = await userModel
+        .findOne({
+            $or: [ {email: normalizedEmail}, {username: normalizedUsername} ]})
+        .select("+password");
+
+    if (!user) {
+        throw new ApiError(401, "Email or password incorrect");
+    }
+
+    // 4️⃣ Verify password
+    const isPasswordValid = await user.isPasswordCorrect(password);
+    if (!isPasswordValid) {
+        throw new ApiError(401, "Email or password incorrect");
+    }
+
+    let {accessToken, refreshToken} = await generateTokens(user._id)
+    const loggedInUser = await userModel.findById(user._id).select(
+        "-password -refreshToken"
+    )
+
+    const options = {
+        httpOnly : true,
+        // secure : process.env.NODE_ENV === 'production'
+    }
+    return res.status(200).cookie("accessToken", accessToken, options).
+    cookie("refreshToken", refreshToken,options).
+    json(
+        new ApiResponse(
+            200,
+            {
+                user : loggedInUser,
+                accessToken,
+                refreshToken
+            },
+             "user logged in successfully"
+        )
+    )
+})
+
+module.exports.logoutUser = asyncHandler(async (req, res)=>{
+    await userModel.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:{
+                refreshToken : undefined
+            }
+        },
+        {new: true}
+    )
+    const options = {
+        httpOnly :true,
+        // secure : process.env.NODE_ENV === 'production'
+    }
+    return res.status(200).
+    clearCookie("accessToken", options).
+    clearCookie("refreshToken", options).
+    json(
+        new ApiResponse(200, {}, " User Logged Out successfully")
+    )
+})
+
+
+module.exports.displayProfile = asyncHandler(async (req, res) => {
+    // let user = await userModel.findOne({email})
+    let user = req.user;
+    
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+    
+    res.render("profile", {user})
+})
+
+

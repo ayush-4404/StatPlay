@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: '/public/temp/default.png'
     },
-    token: {
+    coins: {
         type: Number,
         default: 10
     },
@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    avgscore: {
+    totalScore: {
         type: Number,
         default: 0
     },
@@ -56,15 +56,9 @@ const userSchema = new mongoose.Schema({
 );
 
 
-userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
-    try {
-        const salt = await bcrypt.genSalt(10);
-        this.password = await bcrypt.hash(this.password, salt);
-        return next();
-    } catch (err) {
-        return next(err);
-    }
+userSchema.pre("save", async function () {
+  if (!this.isModified("password")) return;
+  this.password = await bcrypt.hash(this.password, 10);
 });
 
 
@@ -72,7 +66,7 @@ userSchema.methods.isPasswordCorrect = async function (Password) {
     return await bcrypt.compare(Password, this.password);
 };
 
-userSchema.methods.genrateAccessToekn = async function () {
+userSchema.methods.generateAccessToken = async function () {
     return jwt.sign(
         {
             _id: this._id,
@@ -86,7 +80,7 @@ userSchema.methods.genrateAccessToekn = async function () {
     )
 }
 
-userSchema.methods.genrateRefreshToekn = async function () {
+userSchema.methods.generateRefreshToken = async function () {
     return jwt.sign(
         {
             _id: this._id
