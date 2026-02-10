@@ -46,25 +46,32 @@ export function AuthProvider({ children }) {
 
 
   const login = async (identifier, password) => {
-    // Check if identifier is email or username
-    const isEmail = identifier.includes('@')
-    const payload = isEmail 
-      ? { email: identifier, password }
-      : { username: identifier, password }
-    
-    const response = await api.post('/users/login', payload)
-    console.log('Login API Response:', response)
-    
-    if (response.data.success) {
-      const { user, accessToken } = response.data.data
-      localStorage.setItem('accessToken', accessToken)
-      localStorage.setItem('user', JSON.stringify(user))
-      setUser(user)
-      console.log('User set in context:', user)
-      return { success: true, user }
+    try {
+      // Check if identifier is email or username
+      const isEmail = identifier.includes('@')
+      const payload = isEmail 
+        ? { email: identifier, password }
+        : { username: identifier, password }
+      
+      const response = await api.post('/users/login', payload)
+      console.log('Login API Response:', response)
+      
+      if (response.data.success) {
+        const { user, accessToken } = response.data.data
+        localStorage.setItem('accessToken', accessToken)
+        localStorage.setItem('user', JSON.stringify(user))
+        setUser(user)
+        console.log('User set in context:', user)
+        return { success: true, user }
+      }
+      
+      // If response is not successful, throw error
+      throw new Error(response.data.message || 'Login failed')
+    } catch (error) {
+      // Re-throw the error so it can be caught in the component
+      console.error('Login error in AuthContext:', error)
+      throw error
     }
-    
-    return { success: false, message: response.data.message }
   }
 
   const register = async (formData) => {

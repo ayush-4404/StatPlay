@@ -205,9 +205,10 @@ module.exports.loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Email or password incorrect");
   }
 
-  if (!user.isEmailVerified) {
-    throw new ApiError(403, "Please verify your email before logging in.");
-  }
+  // Temporarily disable email verification for development
+  // if (!user.isEmailVerified) {
+  //   throw new ApiError(403, "Please verify your email before logging in.");
+  // }
 
   const { accessToken, refreshToken } = await generateTokens(user._id);
 

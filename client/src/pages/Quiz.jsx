@@ -141,7 +141,7 @@ function Quiz() {
     try {
       const response = await quizApi.post('/guess', {
         quizSessionId,
-        guess: guess.trim()
+        guessedPlayerName: guess.trim()
       })
 
       const result = response.data

@@ -25,23 +25,15 @@ function Login() {
     setLoading(true)
 
     try {
-      const result = await login(identifier, password)
-      console.log('Login result:', result)
-      
-      if (result.success) {
-        console.log('Login successful, navigating to profile')
-        navigate('/profile', { replace: true })
-        return // Exit early on success
-      } else {
-        setError(result.message || 'Login failed')
-      }
+      await login(identifier, password)
+      console.log('Login successful, navigating to profile')
+      // Navigate to profile after successful login
+      navigate('/profile', { replace: true })
     } catch (err) {
       console.error('Login error:', err)
-      // Only set error if it's actually an error, not a success message
+      // Extract error message from various possible error formats
       const errorMessage = err.response?.data?.message || err.message || 'Login failed. Please try again.'
-      if (!errorMessage.toLowerCase().includes('success')) {
-        setError(errorMessage)
-      }
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
