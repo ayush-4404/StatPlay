@@ -1,6 +1,10 @@
 .env
 node_modules
 
+# Temp files and uploads
+public/temp/*
+!public/temp/.gitkeep
+.DS_Store
 
 # Created by https://www.toptal.com/developers/gitignore/api/node
 # Edit at https://www.toptal.com/developers/gitignore?templates=node
