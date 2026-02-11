@@ -2,197 +2,376 @@ const mongoose = require('mongoose');
 const Cricketer = require('../models/cricketer.model');
 require('dotenv').config();
 
-// Sample cricketers for testing
-const sampleCricketers = [
-    {
-        name: "Virat Kohli",
-        imageHidden: "https://via.placeholder.com/300x400?text=Cricketer+1+Hidden",
-        imageRevealed: "https://via.placeholder.com/300x400?text=Virat+Kohli",
-        visibleStats: new Map([
-            ["Matches Played", "500+"],
-            ["Format", "All Formats"],
-            ["Role", "Batsman"],
-            ["Batting Style", "Right-handed"]
-        ]),
-        hiddenStats: new Map([
-            ["Country", "India"],
-            ["Debut Year", "2008"],
-            ["Jersey Number", "18"],
-            ["Best Score", "183"],
-            ["Century Count", "70+"]
-        ]),
-        difficulty: "easy",
-        isActive: true
-    },
-    {
-        name: "MS Dhoni",
-        imageHidden: "https://via.placeholder.com/300x400?text=Cricketer+2+Hidden",
-        imageRevealed: "https://via.placeholder.com/300x400?text=MS+Dhoni",
-        visibleStats: new Map([
-            ["Matches Played", "500+"],
-            ["Format", "All Formats"],
-            ["Role", "Wicket-keeper Batsman"],
-            ["Batting Style", "Right-handed"]
-        ]),
-        hiddenStats: new Map([
-            ["Country", "India"],
-            ["Debut Year", "2004"],
-            ["Jersey Number", "7"],
-            ["World Cups Won", "3"],
-            ["Captain", "Yes"]
-        ]),
-        difficulty: "easy",
-        isActive: true
-    },
-    {
-        name: "Rohit Sharma",
-        imageHidden: "https://via.placeholder.com/300x400?text=Cricketer+3+Hidden",
-        imageRevealed: "https://via.placeholder.com/300x400?text=Rohit+Sharma",
-        visibleStats: new Map([
-            ["Matches Played", "400+"],
-            ["Format", "All Formats"],
-            ["Role", "Opening Batsman"],
-            ["Batting Style", "Right-handed"]
-        ]),
-        hiddenStats: new Map([
-            ["Country", "India"],
-            ["Debut Year", "2007"],
-            ["Jersey Number", "45"],
-            ["ODI Double Centuries", "3"],
-            ["IPL Teams", "Mumbai Indians"]
-        ]),
-        difficulty: "easy",
-        isActive: true
-    },
-    {
-        name: "Jasprit Bumrah",
-        imageHidden: "https://via.placeholder.com/300x400?text=Cricketer+4+Hidden",
-        imageRevealed: "https://via.placeholder.com/300x400?text=Jasprit+Bumrah",
-        visibleStats: new Map([
-            ["Matches Played", "200+"],
-            ["Format", "All Formats"],
-            ["Role", "Fast Bowler"],
-            ["Bowling Style", "Right-arm Fast"]
-        ]),
-        hiddenStats: new Map([
-            ["Country", "India"],
-            ["Debut Year", "2016"],
-            ["Jersey Number", "93"],
-            ["Bowling Action", "Unique"],
-            ["IPL Teams", "Mumbai Indians"]
-        ]),
-        difficulty: "medium",
-        isActive: true
-    },
-    {
-        name: "Sachin Tendulkar",
-        imageHidden: "https://via.placeholder.com/300x400?text=Cricketer+5+Hidden",
-        imageRevealed: "https://via.placeholder.com/300x400?text=Sachin+Tendulkar",
-        visibleStats: new Map([
-            ["Matches Played", "600+"],
-            ["Format", "All Formats"],
-            ["Role", "Batsman"],
-            ["Batting Style", "Right-handed"]
-        ]),
-        hiddenStats: new Map([
-            ["Country", "India"],
-            ["Debut Year", "1989"],
-            ["Jersey Number", "10"],
-            ["Test Centuries", "51"],
-            ["ODI Centuries", "49"],
-            ["Nickname", "Master Blaster"]
-        ]),
-        difficulty: "easy",
-        isActive: true
-    },
-    {
-        name: "Hardik Pandya",
-        imageHidden: "https://via.placeholder.com/300x400?text=Cricketer+6+Hidden",
-        imageRevealed: "https://via.placeholder.com/300x400?text=Hardik+Pandya",
-        visibleStats: new Map([
-            ["Matches Played", "200+"],
-            ["Format", "Limited Overs"],
-            ["Role", "All-rounder"],
-            ["Batting Style", "Right-handed"]
-        ]),
-        hiddenStats: new Map([
-            ["Country", "India"],
-            ["Debut Year", "2016"],
-            ["Jersey Number", "33"],
-            ["Bowling Style", "Right-arm Medium"],
-            ["IPL Teams", "Multiple"]
-        ]),
-        difficulty: "medium",
-        isActive: true
-    },
-    {
-        name: "KL Rahul",
-        imageHidden: "https://via.placeholder.com/300x400?text=Cricketer+7+Hidden",
-        imageRevealed: "https://via.placeholder.com/300x400?text=KL+Rahul",
-        visibleStats: new Map([
-            ["Matches Played", "300+"],
-            ["Format", "All Formats"],
-            ["Role", "Wicket-keeper Batsman"],
-            ["Batting Style", "Right-handed"]
-        ]),
-        hiddenStats: new Map([
-            ["Country", "India"],
-            ["Debut Year", "2014"],
-            ["Jersey Number", "1"],
-            ["Test Debut Score", "3"],
-            ["IPL Teams", "Multiple"]
-        ]),
-        difficulty: "medium",
-        isActive: true
-    },
-    {
-        name: "Ravindra Jadeja",
-        imageHidden: "https://via.placeholder.com/300x400?text=Cricketer+8+Hidden",
-        imageRevealed: "https://via.placeholder.com/300x400?text=Ravindra+Jadeja",
-        visibleStats: new Map([
-            ["Matches Played", "300+"],
-            ["Format", "All Formats"],
-            ["Role", "All-rounder"],
-            ["Batting Style", "Left-handed"]
-        ]),
-        hiddenStats: new Map([
-            ["Country", "India"],
-            ["Debut Year", "2009"],
-            ["Jersey Number", "8"],
-            ["Bowling Style", "Left-arm Spin"],
-            ["Fielding", "Excellent"],
-            ["Nickname", "Sir Jadeja"]
-        ]),
-        difficulty: "medium",
-        isActive: true
-    }
+const cricketers = [
+
+/* ================= 🇮🇳 INDIA ================= */
+
+{
+  name: "Virat Kohli",
+  imageHidden: "/images/batsman.jpg",
+  imageRevealed: "/images/batsman.jpg",
+  visibleStats: new Map([
+    ["Age", "37"],
+    ["Birthplace", "Delhi, India"],
+    ["Role", "Batsman"],
+    ["Matches Played", "550+"],
+    ["IPL Team", "Royal Challengers Bangalore"],
+    ["Runs", "26000+"],
+    ["Wickets", "9"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "India"]
+  ]),
+  difficulty: "easy",
+  isActive: true
+},
+{
+  name: "MS Dhoni",
+  imageHidden: "/images/wicketkeeper.jpg",
+  imageRevealed: "/images/wicketkeeper.jpg",
+  visibleStats: new Map([
+    ["Age", "44"],
+    ["Birthplace", "Ranchi, India"],
+    ["Role", "Wicketkeeper"],
+    ["Matches Played", "538"],
+    ["IPL Team", "Chennai Super Kings"],
+    ["Runs", "17000+"],
+    ["Wickets", "1"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "India"]
+  ]),
+  difficulty: "easy",
+  isActive: true
+},
+{
+  name: "Jasprit Bumrah",
+  imageHidden: "/images/bowler.jpg",
+  imageRevealed: "/images/bowler.jpg",
+  visibleStats: new Map([
+    ["Age", "32"],
+    ["Birthplace", "Ahmedabad, India"],
+    ["Role", "Bowler"],
+    ["Matches Played", "210+"],
+    ["IPL Team", "Mumbai Indians"],
+    ["Runs", "200+"],
+    ["Wickets", "390+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "India"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+
+/* ================= 🇦🇺 AUSTRALIA ================= */
+
+{
+  name: "Steve Smith",
+  imageHidden: "/images/batsman.jpg",
+  imageRevealed: "/images/batsman.jpg",
+  visibleStats: new Map([
+    ["Age", "36"],
+    ["Birthplace", "Sydney, Australia"],
+    ["Role", "Batsman"],
+    ["Matches Played", "450+"],
+    ["IPL Team", "Delhi Capitals"],
+    ["Runs", "17000+"],
+    ["Wickets", "30+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "Australia"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+{
+  name: "David Warner",
+  imageHidden: "/images/batsman.jpg",
+  imageRevealed: "/images/batsman.jpg",
+  visibleStats: new Map([
+    ["Age", "39"],
+    ["Birthplace", "Sydney, Australia"],
+    ["Role", "Batsman"],
+    ["Matches Played", "470+"],
+    ["IPL Team", "Delhi Capitals"],
+    ["Runs", "18000+"],
+    ["Wickets", "5"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "Australia"]
+  ]),
+  difficulty: "easy",
+  isActive: true
+},
+{
+  name: "Pat Cummins",
+  imageHidden: "/images/bowler.jpg",
+  imageRevealed: "/images/bowler.jpg",
+  visibleStats: new Map([
+    ["Age", "32"],
+    ["Birthplace", "Sydney, Australia"],
+    ["Role", "Bowler"],
+    ["Matches Played", "250+"],
+    ["IPL Team", "Sunrisers Hyderabad"],
+    ["Runs", "1500+"],
+    ["Wickets", "430+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "Australia"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+
+/* ================= 🏴 ENGLAND ================= */
+
+{
+  name: "Joe Root",
+  imageHidden: "/images/batsman.jpg",
+  imageRevealed: "/images/batsman.jpg",
+  visibleStats: new Map([
+    ["Age", "35"],
+    ["Birthplace", "Sheffield, England"],
+    ["Role", "Batsman"],
+    ["Matches Played", "500+"],
+    ["IPL Team", "Rajasthan Royals"],
+    ["Runs", "20000+"],
+    ["Wickets", "50+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "England"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+{
+  name: "Ben Stokes",
+  imageHidden: "/images/allrounder.jpg",
+  imageRevealed: "/images/allrounder.jpg",
+  visibleStats: new Map([
+    ["Age", "34"],
+    ["Birthplace", "Christchurch, New Zealand"],
+    ["Role", "All-rounder"],
+    ["Matches Played", "380+"],
+    ["IPL Team", "Chennai Super Kings"],
+    ["Runs", "12000+"],
+    ["Wickets", "250+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "England"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+
+/* ================= 🇵🇰 PAKISTAN ================= */
+
+{
+  name: "Babar Azam",
+  imageHidden: "/images/batsman.jpg",
+  imageRevealed: "/images/batsman.jpg",
+  visibleStats: new Map([
+    ["Age", "29"],
+    ["Birthplace", "Lahore, Pakistan"],
+    ["Role", "Batsman"],
+    ["Matches Played", "300+"],
+    ["IPL Team", "N/A"],
+    ["Runs", "13000+"],
+    ["Wickets", "2"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "Pakistan"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+{
+  name: "Shaheen Afridi",
+  imageHidden: "/images/bowler.jpg",
+  imageRevealed: "/images/bowler.jpg",
+  visibleStats: new Map([
+    ["Age", "23"],
+    ["Birthplace", "Khyber, Pakistan"],
+    ["Role", "Bowler"],
+    ["Matches Played", "160+"],
+    ["IPL Team", "N/A"],
+    ["Runs", "300+"],
+    ["Wickets", "280+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "Pakistan"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+
+/* ================= 🇿🇦 SOUTH AFRICA ================= */
+
+{
+  name: "AB de Villiers",
+  imageHidden: "/images/batsman.jpg",
+  imageRevealed: "/images/batsman.jpg",
+  visibleStats: new Map([
+    ["Age", "39"],
+    ["Birthplace", "Pretoria, South Africa"],
+    ["Role", "Batsman"],
+    ["Matches Played", "420+"],
+    ["IPL Team", "Royal Challengers Bangalore"],
+    ["Runs", "20000+"],
+    ["Wickets", "7"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "South Africa"]
+  ]),
+  difficulty: "easy",
+  isActive: true
+},
+{
+  name: "Kagiso Rabada",
+  imageHidden: "/images/bowler.jpg",
+  imageRevealed: "/images/bowler.jpg",
+  visibleStats: new Map([
+    ["Age", "28"],
+    ["Birthplace", "Johannesburg, South Africa"],
+    ["Role", "Bowler"],
+    ["Matches Played", "230+"],
+    ["IPL Team", "Punjab Kings"],
+    ["Runs", "400+"],
+    ["Wickets", "470+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "South Africa"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+
+/* ================= 🇳🇿 NEW ZEALAND ================= */
+
+{
+  name: "Kane Williamson",
+  imageHidden: "/images/batsman.jpg",
+  imageRevealed: "/images/batsman.jpg",
+  visibleStats: new Map([
+    ["Age", "33"],
+    ["Birthplace", "Tauranga, New Zealand"],
+    ["Role", "Batsman"],
+    ["Matches Played", "410+"],
+    ["IPL Team", "Gujarat Titans"],
+    ["Runs", "18000+"],
+    ["Wickets", "40+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "New Zealand"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+{
+  name: "Trent Boult",
+  imageHidden: "/images/bowler.jpg",
+  imageRevealed: "/images/bowler.jpg",
+  visibleStats: new Map([
+    ["Age", "34"],
+    ["Birthplace", "Rotorua, New Zealand"],
+    ["Role", "Bowler"],
+    ["Matches Played", "320+"],
+    ["IPL Team", "Rajasthan Royals"],
+    ["Runs", "800+"],
+    ["Wickets", "550+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "New Zealand"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+
+/* ================= 🇦🇫 AFGHANISTAN ================= */
+
+{
+  name: "Rashid Khan",
+  imageHidden: "/images/bowler.jpg",
+  imageRevealed: "/images/bowler.jpg",
+  visibleStats: new Map([
+    ["Age", "25"],
+    ["Birthplace", "Nangarhar, Afghanistan"],
+    ["Role", "Bowler"],
+    ["Matches Played", "250+"],
+    ["IPL Team", "Gujarat Titans"],
+    ["Runs", "1200+"],
+    ["Wickets", "480+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "Afghanistan"]
+  ]),
+  difficulty: "hard",
+  isActive: true
+},
+
+/* ================= 🇧🇩 BANGLADESH ================= */
+
+{
+  name: "Shakib Al Hasan",
+  imageHidden: "/images/allrounder.jpg",
+  imageRevealed: "/images/allrounder.jpg",
+  visibleStats: new Map([
+    ["Age", "36"],
+    ["Birthplace", "Magura, Bangladesh"],
+    ["Role", "All-rounder"],
+    ["Matches Played", "450+"],
+    ["IPL Team", "Kolkata Knight Riders"],
+    ["Runs", "14000+"],
+    ["Wickets", "650+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "Bangladesh"]
+  ]),
+  difficulty: "medium",
+  isActive: true
+},
+
+/* ================= 🇯🇲 WEST INDIES ================= */
+
+{
+  name: "Chris Gayle",
+  imageHidden: "/images/batsman.jpg",
+  imageRevealed: "/images/batsman.jpg",
+  visibleStats: new Map([
+    ["Age", "44"],
+    ["Birthplace", "Kingston, Jamaica"],
+    ["Role", "Batsman"],
+    ["Matches Played", "480+"],
+    ["IPL Team", "Punjab Kings"],
+    ["Runs", "19000+"],
+    ["Wickets", "20+"]
+  ]),
+  hiddenStats: new Map([
+    ["Country", "West Indies"]
+  ]),
+  difficulty: "easy",
+  isActive: true
+}
+
 ];
 
 async function seedCricketers() {
-    try {
-        // Connect to MongoDB
-        await mongoose.connect(process.env.MONGODB_URI);
-        console.log('✅ Connected to MongoDB');
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log("✅ MongoDB connected");
 
-        // Clear existing cricketers (optional)
-        await Cricketer.deleteMany({});
-        console.log('🗑️  Cleared existing cricketers');
+    await Cricketer.deleteMany({});
+    console.log("🗑️ Existing cricketers removed");
 
-        // Insert sample cricketers
-        const result = await Cricketer.insertMany(sampleCricketers);
-        console.log(`✅ Successfully added ${result.length} cricketers`);
+    await Cricketer.insertMany(cricketers);
+    console.log(`🏏 ${cricketers.length} cricketers inserted successfully`);
 
-        console.log('\n📋 Cricketers added:');
-        result.forEach((cricketer, index) => {
-            console.log(`${index + 1}. ${cricketer.name} (${cricketer.difficulty})`);
-        });
-
-        process.exit(0);
-    } catch (error) {
-        console.error('❌ Error seeding cricketers:', error);
-        process.exit(1);
-    }
+    process.exit(0);
+  } catch (err) {
+    console.error("❌ Error seeding data:", err);
+    process.exit(1);
+  }
 }
 
-// Run the seed function
 seedCricketers();

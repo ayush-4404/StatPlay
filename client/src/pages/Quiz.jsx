@@ -1,64 +1,25 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import axios from 'axios'
-import './Quiz.css'
-
-// Create a separate axios instance for quiz endpoints
-const quizApi = axios.create({
-  baseURL: '/quiz',
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-})
-
-// Add token to requests
-quizApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-const GAME_STATE = {
-  START: 'start',
-  PLAYING: 'playing',
-  REVEALED: 'revealed',
-  RESULTS: 'results'
-}
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import api from '../services/api'
 
 function Quiz() {
+  const { refreshUser } = useAuth()
   const navigate = useNavigate()
-  const [gameState, setGameState] = useState(GAME_STATE.START)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [message, setMessage] = useState({ text: '', type: '' })
-  
-  // Quiz data
+
+  // Quiz state
+  const [quizState, setQuizState] = useState('idle') // idle, loading, playing, result, gameover
   const [quizSessionId, setQuizSessionId] = useState(null)
   const [roundNumber, setRoundNumber] = useState(1)
-  const [totalScore, setTotalScore] = useState(0)
-  const [attemptsLeft, setAttemptsLeft] = useState(3)
   const [visibleStats, setVisibleStats] = useState({})
-  const [imageHidden, setImageHidden] = useState('')
+  const [attemptsLeft, setAttemptsLeft] = useState(3)
+  const [totalScore, setTotalScore] = useState(0)
   const [guess, setGuess] = useState('')
-  const [guesses, setGuesses] = useState([])
-  
-  // Revealed data
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [feedback, setFeedback] = useState(null)
   const [revealedData, setRevealedData] = useState(null)
-  const [scoreAwarded, setScoreAwarded] = useState(0)
-  const [wasCorrect, setWasCorrect] = useState(false)
-  const [hasNextRound, setHasNextRound] = useState(false)
-  const [nextRoundData, setNextRoundData] = useState(null)
-  
-  // Results
-  const [results, setResults] = useState(null)
-
-  const showMessage = useCallback((text, type = 'info') => {
-    setMessage({ text, type })
-    setTimeout(() => setMessage({ text: '', type: '' }), 3000)
-  }, [])
+  const [hasActiveQuiz, setHasActiveQuiz] = useState(false)
 
   // Check for active quiz on mount
   useEffect(() => {
@@ -67,410 +28,545 @@ function Quiz() {
 
   const checkActiveQuiz = async () => {
     try {
-      const response = await quizApi.get('/status')
-      const data = response.data
-      
-      if (data.success && data.data.hasActiveQuiz) {
-        if (window.confirm('You have an active quiz. Do you want to resume it?')) {
-          loadQuizData(data.data)
-        }
+      const response = await api.get('/quiz/status')
+      if (response.data.success && response.data.data.hasActiveQuiz) {
+        setHasActiveQuiz(true)
+        const data = response.data.data
+        setQuizSessionId(data.quizSessionId)
+        setRoundNumber(data.roundNumber)
+        setVisibleStats(data.visibleStats || {})
+        setAttemptsLeft(data.attemptsLeft)
+        setTotalScore(data.totalScore)
+        setQuizState('playing')
       }
     } catch (err) {
-      console.error('Error checking active quiz:', err)
+      console.error('Error checking quiz status:', err)
     }
   }
 
-  const loadQuizData = (data) => {
-    setQuizSessionId(data.quizSessionId)
-    setRoundNumber(data.roundNumber)
-    setTotalScore(data.totalScore)
-    setAttemptsLeft(data.attemptsLeft)
-    setVisibleStats(data.visibleStats || {})
-    setImageHidden(data.imageHidden)
-    setGuesses([])
-    setGuess('')
-    setGameState(GAME_STATE.PLAYING)
+  const startNewQuiz = async (forceNew = false) => {
+    setQuizState('loading')
+    setError('')
+    setFeedback(null)
+    setRevealedData(null)
+
+    try {
+      const response = await api.post('/quiz/start', { forceNew })
+      if (response.data.success) {
+        const data = response.data.data
+        setQuizSessionId(data.quizSessionId)
+        setRoundNumber(data.roundNumber)
+        setVisibleStats(data.visibleStats || {})
+        setAttemptsLeft(data.attemptsLeft)
+        setTotalScore(data.totalScore)
+        setQuizState('playing')
+        setHasActiveQuiz(false)
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to start quiz'
+      if (msg.includes('active quiz')) {
+        setHasActiveQuiz(true)
+        setQuizState('idle')
+      } else {
+        setError(msg)
+        setQuizState('idle')
+      }
+    }
   }
 
-  const startQuiz = async (forceNew = false) => {
-    setLoading(true)
+  const submitGuess = async (e) => {
+    e.preventDefault()
+    if (!guess.trim() || submitting) return
+
+    setSubmitting(true)
+    setFeedback(null)
     setError('')
 
     try {
-      const response = await quizApi.post('/start', { 
-        numberOfPlayers: 5, 
-        forceNew 
-      })
-      
-      const result = response.data
-      console.log('Start quiz response:', result)
-
-      if (!result.success) {
-        if (result.message?.includes('already have an active quiz')) {
-          const resume = window.confirm(
-            'You have an unfinished quiz.\n\nOK = Resume old quiz\nCancel = Start fresh'
-          )
-          if (resume) {
-            await checkActiveQuiz()
-          } else {
-            await startQuiz(true)
-          }
-          return
-        }
-        setError(result.message)
-        return
-      }
-
-      loadQuizData(result.data)
-    } catch (err) {
-      console.error('Error starting quiz:', err)
-      setError(err.response?.data?.message || 'Failed to start quiz')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const submitGuess = async () => {
-    if (!guess.trim()) {
-      showMessage('Please enter a guess', 'error')
-      return
-    }
-
-    setLoading(true)
-
-    try {
-      const response = await quizApi.post('/guess', {
+      const response = await api.post('/quiz/guess', {
         quizSessionId,
         guessedPlayerName: guess.trim()
       })
 
-      const result = response.data
-      console.log('Guess response:', result)
+      if (response.data.success) {
+        const data = response.data.data
+        setTotalScore(data.totalScore)
 
-      if (!result.success) {
-        showMessage(result.message, 'error')
-        setLoading(false)
-        return
-      }
-
-      const data = result.data
-      setTotalScore(data.totalScore)
-
-      if (data.correct || data.attemptsExhausted) {
-        // Round completed - show revealed data
-        setRevealedData(data.revealedData)
-        setScoreAwarded(data.scoreAwarded)
-        setWasCorrect(data.correct)
-        setGameState(GAME_STATE.REVEALED)
-
-        if (data.quizCompleted || data.gameOver) {
-          // Quiz ended
-          setResults({
-            totalScore: data.totalScore,
-            roundsCompleted: roundNumber,
-            message: data.message,
-            gameOver: data.gameOver
+        if (data.correct) {
+          // Correct guess
+          setFeedback({
+            type: 'correct',
+            message: `Correct! +${data.scoreAwarded} points`,
+            scoreAwarded: data.scoreAwarded
           })
-          setHasNextRound(false)
-        } else if (data.nextRound) {
-          setHasNextRound(true)
-          setNextRoundData(data.nextRound)
+          setRevealedData(data.revealedData)
+          setQuizState('result')
+
+          // Load next round data
+          if (data.nextRound) {
+            setTimeout(() => {
+              setRoundNumber(data.nextRound.roundNumber)
+              setVisibleStats(data.nextRound.visibleStats || {})
+              setAttemptsLeft(data.nextRound.attemptsLeft)
+              setGuess('')
+              setFeedback(null)
+              setRevealedData(null)
+              setQuizState('playing')
+            }, 3000)
+          }
+        } else if (data.gameOver) {
+          // Game over
+          setFeedback({
+            type: 'gameover',
+            message: 'Game Over!'
+          })
+          setRevealedData(data.revealedData)
+          setQuizState('gameover')
+          refreshUser()
+        } else {
+          // Wrong guess, attempts remaining
+          setAttemptsLeft(data.attemptsLeft)
+          setFeedback({
+            type: 'wrong',
+            message: `Wrong! ${data.attemptsLeft} attempts left`
+          })
+          setGuess('')
         }
-      } else {
-        // Wrong guess but attempts left
-        setGuesses([...guesses, guess])
-        setAttemptsLeft(data.attemptsLeft)
-        showMessage(result.message, 'error')
-        setGuess('')
       }
     } catch (err) {
-      console.error('Error submitting guess:', err)
-      showMessage(err.response?.data?.message || 'Failed to submit guess', 'error')
+      setError(err.response?.data?.message || 'Failed to submit guess')
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
-  }
-
-  const loadNextRound = () => {
-    if (!nextRoundData) return
-
-    setRoundNumber(nextRoundData.roundNumber)
-    setVisibleStats(nextRoundData.visibleStats || {})
-    setImageHidden(nextRoundData.imageHidden)
-    setAttemptsLeft(nextRoundData.attemptsLeft || 3)
-    setGuesses([])
-    setGuess('')
-    setRevealedData(null)
-    setHasNextRound(false)
-    setNextRoundData(null)
-    setGameState(GAME_STATE.PLAYING)
-    showMessage('Next cricketer loaded!', 'success')
-  }
-
-  const showResultsScreen = () => {
-    setGameState(GAME_STATE.RESULTS)
   }
 
   const exitQuiz = async () => {
-    if (!window.confirm('Are you sure you want to exit? Your progress will be saved.')) {
-      return
-    }
-
-    setLoading(true)
-
     try {
-      const response = await quizApi.post('/exit', { quizSessionId })
-      const result = response.data
-      
-      if (result.success) {
-        setResults({
-          totalScore: result.data.totalScore,
-          roundsCompleted: result.data.roundsCompleted,
-          roundsWon: result.data.roundsWon,
-          message: result.data.message
-        })
-        setGameState(GAME_STATE.RESULTS)
-      }
+      await api.post('/quiz/exit', { quizSessionId })
+      refreshUser()
+      navigate('/profile')
     } catch (err) {
       console.error('Error exiting quiz:', err)
-      showMessage('Failed to exit quiz', 'error')
-    } finally {
-      setLoading(false)
+      navigate('/profile')
     }
   }
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && gameState === GAME_STATE.PLAYING) {
-      submitGuess()
+  const renderStats = () => {
+    if (!visibleStats || Object.keys(visibleStats).length === 0) {
+      return <p className="no-stats">No stats available</p>
     }
-  }
 
-  // Render start screen
-  if (gameState === GAME_STATE.START) {
     return (
-      <div className="quiz-container">
-        <div className="quiz-card start-screen">
-          <h1>🏏 Cricket Quiz</h1>
-          <p>Test your knowledge of cricket legends!</p>
-          
-          <div className="rules-box">
-            <h3>📋 How to Play</h3>
-            <ul>
-              <li>You'll be shown stats of a mystery cricketer</li>
-              <li>You have 3 attempts to guess who it is</li>
-              <li>Score: 10 points (1st try), 7 points (2nd), 5 points (3rd)</li>
-              <li>Game ends when you fail to guess a cricketer</li>
-              <li>Try to get the highest score possible!</li>
-            </ul>
+      <div className="stats-grid">
+        {Object.entries(visibleStats).map(([key, value]) => (
+          <div key={key} className="stat-item">
+            <span className="stat-label">{formatStatLabel(key)}</span>
+            <span className="stat-value">{value}</span>
           </div>
-
-          {error && <div className="message error">{error}</div>}
-
-          <button 
-            onClick={() => startQuiz()} 
-            className="btn btn-primary btn-large"
-            disabled={loading}
-          >
-            {loading ? 'Starting...' : '🎮 Start Quiz'}
-          </button>
-
-          <button 
-            onClick={() => navigate('/profile')} 
-            className="btn btn-secondary"
-            style={{ marginTop: '15px' }}
-          >
-            Back to Profile
-          </button>
-        </div>
+        ))}
       </div>
     )
   }
 
-  // Render playing screen
-  if (gameState === GAME_STATE.PLAYING) {
+  const formatStatLabel = (key) => {
+    return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
+  }
+
+  // Idle state - show start/resume options
+  if (quizState === 'idle') {
     return (
-      <div className="quiz-container">
-        <div className="quiz-header">
-          <h2>🏏 Cricket Quiz</h2>
-          <div className="score-board">
-            <span className="score-item">Round: <strong>{roundNumber}</strong></span>
-            <span className="score-item">Score: <strong>{totalScore}</strong></span>
-            <span className="score-item">Attempts: <strong>{attemptsLeft}</strong></span>
+      <div className="quiz-page">
+        <nav className="navbar">
+          <div className="container navbar-content">
+            <Link to="/" className="logo">🏏 StatPlay</Link>
+            <Link to="/profile" className="btn btn-secondary">Profile</Link>
           </div>
-        </div>
+        </nav>
 
-        <div className="quiz-card">
-          {message.text && (
-            <div className={`message ${message.type}`}>{message.text}</div>
-          )}
+        <main className="quiz-main">
+          <div className="container">
+            <div className="card quiz-start-card">
+              <h1>Cricket Quiz</h1>
+              <p>Guess the cricketer from their stats!</p>
 
-          <img 
-            src={imageHidden} 
-            alt="Mystery Cricketer" 
-            className="cricketer-image"
-          />
-
-          <div className="stats-grid">
-            {Object.entries(visibleStats).map(([key, value]) => (
-              <div key={key} className="stat-item">
-                <div className="stat-label">{key}</div>
-                <div className="stat-value">{value}</div>
+              <div className="rules">
+                <h3>How to Play</h3>
+                <ul>
+                  <li>🎯 You get 3 attempts per cricketer</li>
+                  <li>📊 Stats are revealed to help you guess</li>
+                  <li>⭐ Score: 10 pts (1st try), 7 pts (2nd), 5 pts (3rd)</li>
+                  <li>💀 Game ends when you fail to guess correctly</li>
+                </ul>
               </div>
-            ))}
-          </div>
 
-          <div className="attempts-display">
-            {[1, 2, 3].map((i) => (
-              <div 
-                key={i} 
-                className={`attempt-dot ${i > attemptsLeft ? 'used' : ''}`}
-              />
-            ))}
-          </div>
+              {error && <div className="alert alert-error">{error}</div>}
 
-          {guesses.length > 0 && (
-            <div className="guesses-list">
-              <h4>Your guesses:</h4>
-              {guesses.map((g, i) => (
-                <div key={i} className="guess-item">❌ {g}</div>
-              ))}
+              {hasActiveQuiz ? (
+                <div className="active-quiz-options">
+                  <p className="alert alert-warning">You have an active quiz!</p>
+                  <button onClick={() => startNewQuiz(false)} className="btn btn-primary btn-block">
+                    Resume Quiz
+                  </button>
+                  <button onClick={() => startNewQuiz(true)} className="btn btn-secondary btn-block">
+                    Start New Quiz
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => startNewQuiz()} className="btn btn-primary btn-block btn-large">
+                  Start Quiz
+                </button>
+              )}
             </div>
-          )}
-
-          <div className="guess-section">
-            <input
-              type="text"
-              value={guess}
-              onChange={(e) => setGuess(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Enter cricketer's name..."
-              className="guess-input"
-              disabled={loading}
-              autoFocus
-            />
-            <button 
-              onClick={submitGuess} 
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              {loading ? 'Checking...' : 'Submit Guess'}
-            </button>
           </div>
+        </main>
 
-          <button onClick={exitQuiz} className="btn btn-secondary exit-btn">
-            Exit Quiz
-          </button>
-        </div>
+        <style>{styles}</style>
       </div>
     )
   }
 
-  // Render revealed screen
-  if (gameState === GAME_STATE.REVEALED) {
+  // Loading state
+  if (quizState === 'loading') {
     return (
-      <div className="quiz-container">
-        <div className="quiz-header">
-          <h2>🏏 Cricket Quiz</h2>
-          <div className="score-board">
-            <span className="score-item">Round: <strong>{roundNumber}</strong></span>
-            <span className="score-item">Score: <strong>{totalScore}</strong></span>
+      <div className="quiz-page">
+        <div className="loading-screen">
+          <div className="spinner"></div>
+          <p>Loading quiz...</p>
+        </div>
+        <style>{styles}</style>
+      </div>
+    )
+  }
+
+  // Game over state
+  if (quizState === 'gameover') {
+    return (
+      <div className="quiz-page">
+        <nav className="navbar">
+          <div className="container navbar-content">
+            <Link to="/" className="logo">🏏 StatPlay</Link>
+            <Link to="/profile" className="btn btn-secondary">Profile</Link>
+          </div>
+        </nav>
+
+        <main className="quiz-main">
+          <div className="container">
+            <div className="card gameover-card">
+              <div className="gameover-icon">💀</div>
+              <h1>Game Over!</h1>
+              
+              {revealedData && (
+                <div className="revealed-section">
+                  <p className="correct-answer">The answer was: <strong>{revealedData.correctName}</strong></p>
+                  {revealedData.imageRevealed && (
+                    <img src={revealedData.imageRevealed} alt={revealedData.correctName} className="player-image" />
+                  )}
+                </div>
+              )}
+
+              <div className="final-score">
+                <span className="score-label">Final Score</span>
+                <span className="score-value">{totalScore}</span>
+              </div>
+
+              <div className="gameover-actions">
+                <button onClick={() => startNewQuiz()} className="btn btn-primary">
+                  Play Again
+                </button>
+                <Link to="/profile" className="btn btn-secondary">
+                  View Profile
+                </Link>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <style>{styles}</style>
+      </div>
+    )
+  }
+
+  // Playing state (includes result showing)
+  return (
+    <div className="quiz-page">
+      <nav className="navbar">
+        <div className="container navbar-content">
+          <Link to="/" className="logo">🏏 StatPlay</Link>
+          <div className="quiz-info">
+            <span className="round-badge">Round {roundNumber}</span>
+            <span className="score-badge">Score: {totalScore}</span>
           </div>
         </div>
+      </nav>
 
-        <div className="quiz-card revealed-card">
-          <h2 className={wasCorrect ? 'correct' : 'wrong'}>
-            {wasCorrect ? '✅ Correct!' : '❌ Wrong!'}
-          </h2>
-          <h1>{revealedData?.correctName}</h1>
-          
-          <img 
-            src={revealedData?.imageRevealed} 
-            alt={revealedData?.correctName}
-            className="cricketer-image revealed"
-          />
-
-          <p className="score-awarded">
-            {wasCorrect ? `+${scoreAwarded} points!` : 'No points this round'}
-          </p>
-
-          <h3>📊 Complete Stats</h3>
-          <div className="stats-grid">
-            {revealedData?.allStats && Object.entries(revealedData.allStats).map(([key, value]) => (
-              <div key={key} className="stat-item">
-                <div className="stat-label">{key}</div>
-                <div className="stat-value">{value}</div>
+      <main className="quiz-main">
+        <div className="container">
+          <div className="card quiz-card">
+            {quizState === 'result' ? (
+              // Show result before next round
+              <div className="result-section">
+                <div className="result-icon">🎉</div>
+                <h2>{feedback?.message}</h2>
+                {revealedData && (
+                  <>
+                    <p className="correct-answer">It was <strong>{revealedData.correctName}</strong></p>
+                    {revealedData.imageRevealed && (
+                      <img src={revealedData.imageRevealed} alt={revealedData.correctName} className="player-image" />
+                    )}
+                  </>
+                )}
+                <p className="loading-next">Loading next round...</p>
               </div>
-            ))}
-          </div>
-
-          <div className="action-buttons">
-            {hasNextRound ? (
-              <button onClick={loadNextRound} className="btn btn-primary btn-large">
-                Next Cricketer →
-              </button>
             ) : (
-              <button onClick={showResultsScreen} className="btn btn-primary btn-large">
-                View Results
-              </button>
+              // Playing - show stats and guess form
+              <>
+                <div className="quiz-header">
+                  <h2>Who is this cricketer?</h2>
+                  <div className="attempts-display">
+                    {[...Array(3)].map((_, i) => (
+                      <span 
+                        key={i} 
+                        className={`attempt-dot ${i < attemptsLeft ? 'active' : 'used'}`}
+                      >
+                        {i < attemptsLeft ? '❤️' : '🖤'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="stats-section">
+                  <h3>Player Stats</h3>
+                  {renderStats()}
+                </div>
+
+                {error && <div className="alert alert-error">{error}</div>}
+                
+                {feedback && feedback.type === 'wrong' && (
+                  <div className="alert alert-warning">{feedback.message}</div>
+                )}
+
+                <form onSubmit={submitGuess} className="guess-form">
+                  <div className="form-group">
+                    <input
+                      type="text"
+                      value={guess}
+                      onChange={(e) => setGuess(e.target.value)}
+                      placeholder="Enter player name..."
+                      disabled={submitting}
+                      autoFocus
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary btn-block" disabled={submitting || !guess.trim()}>
+                    {submitting ? 'Checking...' : 'Submit Guess'}
+                  </button>
+                </form>
+
+                <button onClick={exitQuiz} className="btn btn-danger exit-btn">
+                  Exit Quiz
+                </button>
+              </>
             )}
           </div>
         </div>
-      </div>
-    )
-  }
+      </main>
 
-  // Render results screen
-  if (gameState === GAME_STATE.RESULTS) {
-    return (
-      <div className="quiz-container">
-        <div className="quiz-card results-card">
-          <h1>{results?.gameOver ? '🎮 Game Over!' : '📊 Quiz Summary'}</h1>
-          
-          <div className="final-score">
-            <span className="score-label">Final Score</span>
-            <span className="score-number">{results?.totalScore || 0}</span>
-          </div>
-
-          <p className="result-message">
-            {results?.message || 'Great job playing!'}
-          </p>
-
-          <div className="result-stats">
-            <div className="result-stat">
-              <span className="value">{results?.roundsCompleted || roundNumber}</span>
-              <span className="label">Rounds Played</span>
-            </div>
-            {results?.roundsWon !== undefined && (
-              <div className="result-stat">
-                <span className="value">{results.roundsWon}</span>
-                <span className="label">Correct Guesses</span>
-              </div>
-            )}
-          </div>
-
-          <div className="action-buttons">
-            <button 
-              onClick={() => {
-                setGameState(GAME_STATE.START)
-                setResults(null)
-              }} 
-              className="btn btn-primary btn-large"
-            >
-              Play Again
-            </button>
-            <button 
-              onClick={() => navigate('/profile')} 
-              className="btn btn-secondary"
-            >
-              Back to Profile
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return null
+      <style>{styles}</style>
+    </div>
+  )
 }
+
+const styles = `
+  .quiz-page {
+    min-height: 100vh;
+  }
+  .navbar {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .navbar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+  .logo:hover {
+    text-decoration: none;
+  }
+  .quiz-info {
+    display: flex;
+    gap: 1rem;
+  }
+  .round-badge, .score-badge {
+    background: var(--bg-input);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+  .score-badge {
+    color: var(--primary);
+  }
+  .quiz-main {
+    padding: 2rem 0;
+  }
+  .quiz-start-card, .quiz-card, .gameover-card {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .quiz-start-card h1, .gameover-card h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  .quiz-start-card > p {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+  }
+  .rules {
+    background: var(--bg-input);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    text-align: left;
+  }
+  .rules h3 {
+    margin-bottom: 1rem;
+    font-size: 1rem;
+  }
+  .rules ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .rules li {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+  }
+  .btn-large {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+  }
+  .active-quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .quiz-header {
+    margin-bottom: 1.5rem;
+  }
+  .quiz-header h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .attempts-display {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+  }
+  .stats-section {
+    margin-bottom: 2rem;
+  }
+  .stats-section h3 {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+  }
+  .stat-item {
+    background: var(--bg-input);
+    padding: 1rem;
+    border-radius: 0.5rem;
+  }
+  .stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+  .stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .no-stats {
+    color: var(--text-muted);
+  }
+  .guess-form {
+    margin-bottom: 1rem;
+  }
+  .guess-form input {
+    text-align: center;
+    font-size: 1.125rem;
+  }
+  .exit-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+  .result-section, .gameover-card {
+    padding: 2rem 0;
+  }
+  .result-icon, .gameover-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+  .correct-answer {
+    font-size: 1.125rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+  .correct-answer strong {
+    color: var(--text-primary);
+  }
+  .player-image {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 1rem 0;
+    border: 3px solid var(--primary);
+  }
+  .loading-next {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-top: 1rem;
+  }
+  .final-score {
+    background: var(--bg-input);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    margin: 2rem 0;
+  }
+  .score-label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .final-score .score-value {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .gameover-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .revealed-section {
+    margin: 1.5rem 0;
+  }
+`
 
 export default Quiz

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import api from '../services/api'
 
 const AuthContext = createContext(null)
@@ -7,34 +7,25 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // Initialize auth state on mount
   useEffect(() => {
-    const initAuth = async (retries = 3) => {
+    const initAuth = async () => {
+      const token = localStorage.getItem('accessToken')
+      if (!token) {
+        setLoading(false)
+        return
+      }
+
       try {
-        setLoading(true)
-        
-        // Only try to get current user if we have a token
-        const token = localStorage.getItem('accessToken')
-        if (!token) {
-          setUser(null)
-          setLoading(false)
-          return
+        const response = await api.get('/users/current-user')
+        if (response.data.success) {
+          setUser(response.data.data)
+          localStorage.setItem('user', JSON.stringify(response.data.data))
         }
-        
-        const res = await api.get('/users/current-user')
-        if (res.data.success) {
-          setUser(res.data.data)
-          localStorage.setItem('user', JSON.stringify(res.data.data))
-        } else {
-          setUser(null)
-        }
-      } catch (err) {
-        // Retry on connection refused (backend not ready yet)
-        if (retries > 0 && (err.code === 'ECONNREFUSED' || err.message?.includes('Network Error'))) {
-          console.log(`Backend not ready, retrying... (${retries} attempts left)`)
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          return initAuth(retries - 1)
-        }
-        // Not logged in or other error - just set user to null
+      } catch (error) {
+        // Token invalid or expired
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('user')
         setUser(null)
       } finally {
         setLoading(false)
@@ -44,44 +35,36 @@ export function AuthProvider({ children }) {
     initAuth()
   }, [])
 
+  // Login function
+  const login = useCallback(async (identifier, password) => {
+    const isEmail = identifier.includes('@')
+    const payload = isEmail
+      ? { email: identifier, password }
+      : { username: identifier, password }
 
-  const login = async (identifier, password) => {
-    try {
-      // Check if identifier is email or username
-      const isEmail = identifier.includes('@')
-      const payload = isEmail 
-        ? { email: identifier, password }
-        : { username: identifier, password }
-      
-      const response = await api.post('/users/login', payload)
-      console.log('Login API Response:', response)
-      
-      if (response.data.success) {
-        const { user, accessToken } = response.data.data
-        localStorage.setItem('accessToken', accessToken)
-        localStorage.setItem('user', JSON.stringify(user))
-        setUser(user)
-        console.log('User set in context:', user)
-        return { success: true, user }
-      }
-      
-      // If response is not successful, throw error
-      throw new Error(response.data.message || 'Login failed')
-    } catch (error) {
-      // Re-throw the error so it can be caught in the component
-      console.error('Login error in AuthContext:', error)
-      throw error
+    const response = await api.post('/users/login', payload)
+
+    if (response.data.success) {
+      const { user: userData, accessToken } = response.data.data
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('user', JSON.stringify(userData))
+      setUser(userData)
+      return { success: true, user: userData }
     }
-  }
 
-  const register = async (formData) => {
+    throw new Error(response.data.message || 'Login failed')
+  }, [])
+
+  // Register function
+  const register = useCallback(async (formData) => {
     const response = await api.post('/users/register', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     return response.data
-  }
+  }, [])
 
-  const logout = async () => {
+  // Logout function
+  const logout = useCallback(async () => {
     try {
       await api.post('/users/logout')
     } catch (error) {
@@ -91,20 +74,20 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('user')
       setUser(null)
     }
-  }
+  }, [])
 
-  const refreshUser = async () => {
+  // Refresh user data
+  const refreshUser = useCallback(async () => {
     try {
       const response = await api.get('/users/current-user')
       if (response.data.success) {
-        const userData = response.data.data
-        localStorage.setItem('user', JSON.stringify(userData))
-        setUser(userData)
+        setUser(response.data.data)
+        localStorage.setItem('user', JSON.stringify(response.data.data))
       }
     } catch (error) {
       console.error('Error refreshing user:', error)
     }
-  }
+  }, [])
 
   const value = {
     user,

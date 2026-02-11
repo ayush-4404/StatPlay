@@ -8,7 +8,7 @@ const api = axios.create({
   }
 })
 
-// Request interceptor to add auth token
+// Request interceptor - add auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken')
@@ -20,33 +20,20 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Response interceptor to handle token refresh
+// Response interceptor - handle 401 errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
-    
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
-      
-      try {
-        const response = await axios.post('/api/v1/users/refresh-token', {}, {
-          withCredentials: true
-        })
-        
-        if (response.data.success) {
-          const { accessToken } = response.data.data
-          localStorage.setItem('accessToken', accessToken)
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`
-          return api(originalRequest)
-        }
-      } catch (refreshError) {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('user')
+    // If 401 and not already retrying, clear auth and redirect
+    if (error.response?.status === 401) {
+      localStorage.removeItem('accessToken')
+      localStorage.removeItem('user')
+      // Only redirect if not already on login/register pages
+      if (!window.location.pathname.includes('/login') && 
+          !window.location.pathname.includes('/register')) {
         window.location.href = '/login'
       }
     }
-    
     return Promise.reject(error)
   }
 )

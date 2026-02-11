@@ -7,7 +7,8 @@ const path = require("path");
 
 // CORS configuration for React frontend
 app.use(cors({
-    origin: '*',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -32,6 +33,20 @@ app.use("/quiz", quizRouter);
 // Health check endpoint
 app.get("/api/health", (req, res) => {
     res.json({ status: "ok", message: "StatPlay API is running" });
+});
+
+// Error handling middleware (must be after all routes)
+app.use((err, req, res, next) => {
+    const statusCode = err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    
+    res.status(statusCode).json({
+        success: false,
+        statusCode: statusCode,
+        message: message,
+        errors: err.errors || [],
+        data: null
+    });
 });
 
 

@@ -1,25 +1,62 @@
-import { Link, useSearchParams } from 'react-router-dom'
-import './Auth.css'
+import { useSearchParams, Link } from 'react-router-dom'
 
 function EmailVerified() {
   const [searchParams] = useSearchParams()
   const username = searchParams.get('username')
 
   return (
-    <div className="auth-container">
-      <div className="auth-card" style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '80px', marginBottom: '20px' }}>✅</div>
-        <h1 style={{ color: '#155724', marginBottom: '15px' }}>Email Verified!</h1>
-        <p style={{ color: '#666', marginBottom: '25px', lineHeight: 1.6 }}>
-          {username && `Welcome ${username}! `}
-          Your email has been successfully verified. 
-          You can now login to your account and start playing!
-        </p>
+    <div className="verified-page">
+      <div className="container">
+        <div className="card verified-card">
+          <div className="icon">✅</div>
+          <h1>Email Verified!</h1>
+          <p>
+            {username ? (
+              <>Welcome, <strong>@{username}</strong>!</>
+            ) : (
+              'Your account has been verified.'
+            )}
+          </p>
+          <p className="secondary">You can now sign in and start playing.</p>
 
-        <Link to="/login" className="btn btn-primary">
-          Login Now
-        </Link>
+          <Link to="/login" className="btn btn-primary">
+            Sign In
+          </Link>
+        </div>
       </div>
+
+      <style>{`
+        .verified-page {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem 1rem;
+        }
+        .verified-card {
+          max-width: 450px;
+          text-align: center;
+        }
+        .icon {
+          font-size: 4rem;
+          margin-bottom: 1.5rem;
+        }
+        .verified-card h1 {
+          font-size: 1.75rem;
+          margin-bottom: 1rem;
+          color: var(--success);
+        }
+        .verified-card p {
+          color: var(--text-secondary);
+          margin-bottom: 0.5rem;
+        }
+        .verified-card p strong {
+          color: var(--text-primary);
+        }
+        .secondary {
+          margin-bottom: 1.5rem;
+        }
+      `}</style>
     </div>
   )
 }

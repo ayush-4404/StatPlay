@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import './Auth.css'
 
 function Login() {
   const [identifier, setIdentifier] = useState('')
@@ -14,7 +13,6 @@ function Login() {
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      console.log('User already logged in, redirecting to profile')
       navigate('/profile', { replace: true })
     }
   }, [user, navigate])
@@ -26,13 +24,9 @@ function Login() {
 
     try {
       await login(identifier, password)
-      console.log('Login successful, navigating to profile')
-      // Navigate to profile after successful login
-      navigate('/profile', { replace: true })
+      // Navigation handled by useEffect when user state updates
     } catch (err) {
-      console.error('Login error:', err)
-      // Extract error message from various possible error formats
-      const errorMessage = err.response?.data?.message || err.message || 'Login failed. Please try again.'
+      const errorMessage = err.response?.data?.message || err.message || 'Login failed'
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -40,47 +34,95 @@ function Login() {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1>Login to StatPlay</h1>
-        <p className="auth-subtitle">Test your cricket knowledge!</p>
-
-        {error && <div className="error-message" style={{ color: '#dc3545', background: '#f8d7da', padding: '10px', borderRadius: '8px', marginBottom: '15px' }}>{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="identifier">Email or Username</label>
-            <input
-              type="text"
-              id="identifier"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Enter your email or username"
-              required
-            />
+    <div className="auth-page">
+      <div className="auth-container">
+        <div className="card auth-card">
+          <div className="auth-header">
+            <Link to="/" className="back-link">← Back</Link>
+            <h1>Welcome Back</h1>
+            <p>Sign in to continue playing</p>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
-              required
-            />
-          </div>
+          {error && <div className="alert alert-error">{error}</div>}
 
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="identifier">Email or Username</label>
+              <input
+                type="text"
+                id="identifier"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="Enter your email or username"
+                required
+                autoComplete="username"
+              />
+            </div>
 
-        <p className="auth-link">
-          Don't have an account? <Link to="/register">Register here</Link>
-        </p>
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+                autoComplete="current-password"
+              />
+            </div>
+
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
+
+          <p className="auth-footer">
+            Don't have an account? <Link to="/register">Create one</Link>
+          </p>
+        </div>
       </div>
+
+      <style>{`
+        .auth-page {
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem 1rem;
+        }
+        .auth-container {
+          width: 100%;
+          max-width: 420px;
+        }
+        .auth-card {
+          text-align: center;
+        }
+        .auth-header {
+          margin-bottom: 2rem;
+        }
+        .back-link {
+          display: inline-block;
+          color: var(--text-secondary);
+          font-size: 0.875rem;
+          margin-bottom: 1.5rem;
+        }
+        .auth-header h1 {
+          font-size: 1.75rem;
+          margin-bottom: 0.5rem;
+        }
+        .auth-header p {
+          color: var(--text-secondary);
+        }
+        .auth-footer {
+          margin-top: 1.5rem;
+          color: var(--text-secondary);
+          font-size: 0.875rem;
+        }
+        .form-group {
+          text-align: left;
+        }
+      `}</style>
     </div>
   )
 }

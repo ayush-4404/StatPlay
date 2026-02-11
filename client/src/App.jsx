@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
@@ -12,31 +12,31 @@ import EmailVerified from './pages/EmailVerified'
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <BrowserRouter>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/check-email" element={<CheckEmail />} />
           <Route path="/email-verified" element={<EmailVerified />} />
-          <Route 
-            path="/profile" 
+          <Route
+            path="/profile"
             element={
               <ProtectedRoute>
                 <Profile />
               </ProtectedRoute>
-            } 
+            }
           />
-          <Route 
-            path="/quiz" 
+          <Route
+            path="/quiz"
             element={
               <ProtectedRoute>
                 <Quiz />
               </ProtectedRoute>
-            } 
+            }
           />
         </Routes>
-      </Router>
+      </BrowserRouter>
     </AuthProvider>
   )
 }
