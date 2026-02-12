@@ -25,6 +25,7 @@ function Profile() {
         <div className="container navbar-content">
           <Link to="/" className="logo">🏏 StatPlay</Link>
           <div className="nav-links">
+            <Link to="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
             <Link to="/quiz" className="btn btn-primary">Play Quiz</Link>
             <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
           </div>
@@ -65,8 +66,10 @@ function Profile() {
                   <span className="stat-label">High Score</span>
                 </div>
                 <div className="stat-item">
-                  <span className="stat-value">{user.totalScore || 0}</span>
-                  <span className="stat-label">Total Score</span>
+                  <span className="stat-value">
+                    {user.gamesPlayed > 0 ? (user.totalScore / user.gamesPlayed).toFixed(1) : '0'}
+                  </span>
+                  <span className="stat-label">Avg Score per Match</span>
                 </div>
                 <div className="stat-item">
                   <span className="stat-value">{user.coins || 0}</span>
@@ -109,6 +112,14 @@ function Profile() {
           display: flex;
           align-items: center;
           gap: 1rem;
+        }
+        .nav-link {
+          color: var(--text-secondary);
+          font-weight: 500;
+          text-decoration: none;
+        }
+        .nav-link:hover {
+          color: var(--text-primary);
         }
         .profile-main {
           padding: 2rem 0;

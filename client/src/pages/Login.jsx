@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
 function Login() {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const { login, user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Show message from registration
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccess(location.state.message)
+    }
+  }, [location.state])
 
   // Redirect if already logged in
   useEffect(() => {
@@ -20,6 +29,7 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setSuccess('')
     setLoading(true)
 
     try {
@@ -43,6 +53,7 @@ function Login() {
             <p>Sign in to continue playing</p>
           </div>
 
+          {success && <div className="alert alert-success">{success}</div>}
           {error && <div className="alert alert-error">{error}</div>}
 
           <form onSubmit={handleSubmit}>

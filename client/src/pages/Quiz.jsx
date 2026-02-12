@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
 
 function Quiz() {
-  const { refreshUser } = useAuth()
+  const { user, refreshUser } = useAuth()
   const navigate = useNavigate()
 
   // Quiz state
@@ -12,6 +12,7 @@ function Quiz() {
   const [quizSessionId, setQuizSessionId] = useState(null)
   const [roundNumber, setRoundNumber] = useState(1)
   const [visibleStats, setVisibleStats] = useState({})
+  const [imageHidden, setImageHidden] = useState(null)
   const [attemptsLeft, setAttemptsLeft] = useState(3)
   const [totalScore, setTotalScore] = useState(0)
   const [guess, setGuess] = useState('')
@@ -21,8 +22,9 @@ function Quiz() {
   const [revealedData, setRevealedData] = useState(null)
   const [hasActiveQuiz, setHasActiveQuiz] = useState(false)
 
-  // Check for active quiz on mount
+  // Check for active quiz on mount and refresh user for coin balance
   useEffect(() => {
+    refreshUser()
     checkActiveQuiz()
   }, [])
 
@@ -35,6 +37,7 @@ function Quiz() {
         setQuizSessionId(data.quizSessionId)
         setRoundNumber(data.roundNumber)
         setVisibleStats(data.visibleStats || {})
+        setImageHidden(data.imageHidden || null)
         setAttemptsLeft(data.attemptsLeft)
         setTotalScore(data.totalScore)
         setQuizState('playing')
@@ -57,6 +60,7 @@ function Quiz() {
         setQuizSessionId(data.quizSessionId)
         setRoundNumber(data.roundNumber)
         setVisibleStats(data.visibleStats || {})
+        setImageHidden(data.imageHidden || null)
         setAttemptsLeft(data.attemptsLeft)
         setTotalScore(data.totalScore)
         setQuizState('playing')
@@ -107,6 +111,7 @@ function Quiz() {
             setTimeout(() => {
               setRoundNumber(data.nextRound.roundNumber)
               setVisibleStats(data.nextRound.visibleStats || {})
+              setImageHidden(data.nextRound.imageHidden || null)
               setAttemptsLeft(data.nextRound.attemptsLeft)
               setGuess('')
               setFeedback(null)
@@ -174,12 +179,18 @@ function Quiz() {
 
   // Idle state - show start/resume options
   if (quizState === 'idle') {
+    const canAffordQuiz = (user?.coins || 0) >= 1
+
     return (
       <div className="quiz-page">
         <nav className="navbar">
           <div className="container navbar-content">
             <Link to="/" className="logo">🏏 StatPlay</Link>
-            <Link to="/profile" className="btn btn-secondary">Profile</Link>
+            <div className="nav-right">
+              <Link to="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
+              <span className="coin-badge">🪙 {user?.coins || 0} coins</span>
+              <Link to="/profile" className="btn btn-secondary">Profile</Link>
+            </div>
           </div>
         </nav>
 
@@ -196,10 +207,17 @@ function Quiz() {
                   <li>📊 Stats are revealed to help you guess</li>
                   <li>⭐ Score: 10 pts (1st try), 7 pts (2nd), 5 pts (3rd)</li>
                   <li>💀 Game ends when you fail to guess correctly</li>
+                  <li>🪙 Cost: 1 coin per game</li>
                 </ul>
               </div>
 
               {error && <div className="alert alert-error">{error}</div>}
+
+              {!canAffordQuiz && (
+                <div className="alert alert-warning">
+                  You need at least 1 coin to play. Come back later!
+                </div>
+              )}
 
               {hasActiveQuiz ? (
                 <div className="active-quiz-options">
@@ -207,13 +225,13 @@ function Quiz() {
                   <button onClick={() => startNewQuiz(false)} className="btn btn-primary btn-block">
                     Resume Quiz
                   </button>
-                  <button onClick={() => startNewQuiz(true)} className="btn btn-secondary btn-block">
-                    Start New Quiz
+                  <button onClick={() => startNewQuiz(true)} className="btn btn-secondary btn-block" disabled={!canAffordQuiz}>
+                    Start New Quiz (1 🪙)
                   </button>
                 </div>
               ) : (
-                <button onClick={() => startNewQuiz()} className="btn btn-primary btn-block btn-large">
-                  Start Quiz
+                <button onClick={() => startNewQuiz()} className="btn btn-primary btn-block btn-large" disabled={!canAffordQuiz}>
+                  Start Quiz (1 🪙)
                 </button>
               )}
             </div>
@@ -245,7 +263,10 @@ function Quiz() {
         <nav className="navbar">
           <div className="container navbar-content">
             <Link to="/" className="logo">🏏 StatPlay</Link>
-            <Link to="/profile" className="btn btn-secondary">Profile</Link>
+            <div className="nav-right">
+              <Link to="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
+              <Link to="/profile" className="btn btn-secondary">Profile</Link>
+            </div>
           </div>
         </nav>
 
@@ -265,8 +286,15 @@ function Quiz() {
               )}
 
               <div className="final-score">
-                <span className="score-label">Final Score</span>
+                <span className="score-label">This Game Score</span>
                 <span className="score-value">{totalScore}</span>
+              </div>
+
+              <div className="final-score">
+                <span className="score-label">Average Score per Game</span>
+                <span className="score-value">
+                  {user?.gamesPlayed > 0 ? (user.totalScore / user.gamesPlayed).toFixed(1) : '0'}
+                </span>
               </div>
 
               <div className="gameover-actions">
@@ -333,6 +361,16 @@ function Quiz() {
                     ))}
                   </div>
                 </div>
+
+                {imageHidden && (
+                  <div className="image-section">
+                    <img 
+                      src={imageHidden} 
+                      alt="Hidden cricketer" 
+                      className="cricketer-image"
+                    />
+                  </div>
+                )}
 
                 <div className="stats-section">
                   <h3>Player Stats</h3>
@@ -410,6 +448,27 @@ const styles = `
   .score-badge {
     color: var(--primary);
   }
+  .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .nav-link {
+    color: var(--text-secondary);
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .nav-link:hover {
+    color: var(--text-primary);
+  }
+  .coin-badge {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: white;
+  }
   .quiz-main {
     padding: 2rem 0;
   }
@@ -468,6 +527,20 @@ const styles = `
     justify-content: center;
     gap: 0.5rem;
     font-size: 1.5rem;
+  }
+  .image-section {
+    margin: 2rem 0;
+    display: flex;
+    justify-content: center;
+  }
+  .cricketer-image {
+    max-width: 100%;
+    width: 300px;
+    height: 300px;
+    object-fit: cover;
+    border-radius: 1rem;
+    border: 3px solid var(--primary);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   }
   .stats-section {
     margin-bottom: 2rem;

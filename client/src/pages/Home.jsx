@@ -10,6 +10,7 @@ function Home() {
         <div className="container navbar-content">
           <Link to="/" className="logo">🏏 StatPlay</Link>
           <div className="nav-links">
+            <Link to="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
             {isAuthenticated ? (
               <>
                 <Link to="/profile" className="nav-link">Profile</Link>
@@ -67,10 +68,29 @@ function Home() {
       <style>{`
         .home-page {
           min-height: 100vh;
+          background: url('/images/statPlay%20bg.jpg') no-repeat center center;
+          background-size: cover;
+          background-attachment: fixed;
+          position: relative;
+        }
+        .home-page::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(3px);
+          z-index: 0;
         }
         .navbar {
           padding: 1rem 0;
-          border-bottom: 1px solid var(--border);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          position: relative;
+          z-index: 1;
+          background: rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(10px);
         }
         .navbar-content {
           display: flex;
@@ -80,7 +100,7 @@ function Home() {
         .logo {
           font-size: 1.5rem;
           font-weight: 700;
-          color: var(--text-primary);
+          color: white;
         }
         .logo:hover {
           text-decoration: none;
@@ -91,14 +111,16 @@ function Home() {
           gap: 1.5rem;
         }
         .nav-link {
-          color: var(--text-secondary);
+          color: rgba(255, 255, 255, 0.8);
           font-weight: 500;
         }
         .nav-link:hover {
-          color: var(--text-primary);
+          color: white;
         }
         .hero {
           padding: 4rem 0;
+          position: relative;
+          z-index: 1;
         }
         .hero-content {
           text-align: center;
@@ -109,15 +131,14 @@ function Home() {
           font-size: 3rem;
           font-weight: 700;
           margin-bottom: 1rem;
-          background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          color: white;
+          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
         }
         .hero-subtitle {
           font-size: 1.25rem;
-          color: var(--text-secondary);
+          color: rgba(255, 255, 255, 0.9);
           margin-bottom: 3rem;
+          text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
         }
         .features {
           display: grid;
@@ -127,9 +148,10 @@ function Home() {
         }
         .feature {
           padding: 1.5rem;
-          background: var(--bg-card);
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(10px);
           border-radius: 1rem;
-          border: 1px solid var(--border);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .feature-icon {
           font-size: 2.5rem;
@@ -139,9 +161,10 @@ function Home() {
         .feature h3 {
           font-size: 1.125rem;
           margin-bottom: 0.5rem;
+          color: white;
         }
         .feature p {
-          color: var(--text-secondary);
+          color: rgba(255, 255, 255, 0.8);
           font-size: 0.875rem;
         }
         .cta-section {
@@ -151,8 +174,10 @@ function Home() {
           gap: 1rem;
         }
         .welcome-text {
-          color: var(--text-secondary);
+          color: rgba(255, 255, 255, 0.9);
           margin-bottom: 0.5rem;
+          font-size: 1.125rem;
+          text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
         }
         .btn-large {
           padding: 1rem 2rem;

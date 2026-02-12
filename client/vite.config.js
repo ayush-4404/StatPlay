@@ -13,6 +13,10 @@ export default defineConfig({
       '/quiz': {
         target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+      '/images': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
       }
     }
   },

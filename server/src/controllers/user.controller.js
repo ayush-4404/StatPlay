@@ -150,23 +150,22 @@ module.exports.registerUser = asyncHandler(async (req, res) => {
     `;
 
     // Send verification email
+    let emailSent = false;
     try {
         await sendEmail({
             email: user.email,
             subject: 'Email Verification - StatPlay',
             html: htmlContent
         });
+        emailSent = true;
     } catch (error) {
-        // If email fails, delete the user and throw error
+        // Log error but don't fail registration - allows development without email
+        console.error('Email sending failed:', error.message);
         user.emailVerificationToken = undefined;
         user.emailVerificationExpiry = undefined;
+        user.isEmailVerified = true; // Auto-verify when email unavailable
         await user.save({ validateBeforeSave: false });
-        
-        throw new ApiError(500, "Failed to send verification email. Please try again.");
     }
-
-    // Redirect to check-email page after registration
-    // return res.redirect('/check-email')
 
     // For API endpoint:
     return res.status(201).json(
@@ -174,9 +173,12 @@ module.exports.registerUser = asyncHandler(async (req, res) => {
             201, 
             { 
                 user: createdUser,
-                message: "Registration successful! Please check your email to verify your account."
+                emailSent,
+                message: emailSent 
+                    ? "Registration successful! Check your email to verify."
+                    : "Registration successful! (Email skipped - check server EMAIL config)"
             }, 
-            "User registered successfully. Verification email sent."
+            emailSent ? "Verification email sent." : "Registered without email verification."
         )
     )
 
@@ -392,5 +394,27 @@ module.exports.resendVerificationEmail = asyncHandler(async (req, res) => {
     // For API endpoint:
     return res.status(200).json(
         new ApiResponse(200, {}, "Verification email sent successfully")
+    );
+});
+
+module.exports.getLeaderboard = asyncHandler(async (req, res) => {
+    const users = await userModel
+        .find()
+        .select('name username photo highestScore gamesPlayed totalScore')
+        .sort({ highestScore: -1 })
+        .limit(100);
+
+    const leaderboard = users.map((user, index) => ({
+        rank: index + 1,
+        name: user.name,
+        username: user.username,
+        photo: user.photo,
+        highestScore: user.highestScore || 0,
+        gamesPlayed: user.gamesPlayed || 0,
+        averageScore: user.gamesPlayed > 0 ? (user.totalScore / user.gamesPlayed).toFixed(1) : '0'
+    }));
+
+    return res.status(200).json(
+        new ApiResponse(200, leaderboard, "Leaderboard fetched successfully")
     );
 });

@@ -75,7 +75,13 @@ function Register() {
       const result = await register(data)
 
       if (result.success) {
-        navigate('/check-email', { state: { email: formData.email } })
+        // Check if email was actually sent
+        if (result.data?.emailSent === false) {
+          // Email not configured - go straight to login
+          navigate('/login', { state: { message: 'Account created! You can now log in.' } })
+        } else {
+          navigate('/check-email', { state: { email: formData.email } })
+        }
       } else {
         setError(result.message || 'Registration failed')
       }

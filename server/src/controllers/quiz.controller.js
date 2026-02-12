@@ -34,6 +34,12 @@ module.exports.startQuiz = asyncHandler(async (req, res) => {
     const userId = req.user._id;
     const { forceNew = false } = req.body;
 
+    // Check if user has enough coins
+    const user = await User.findById(userId);
+    if (user.coins < 1) {
+        throw new ApiError(400, "Not enough coins to play. You need at least 1 coin.");
+    }
+
     // Check if user has an active quiz
     const activeQuiz = await QuizSession.findOne({ userId, isCompleted: false });
     if (activeQuiz) {
@@ -58,6 +64,9 @@ module.exports.startQuiz = asyncHandler(async (req, res) => {
             throw new ApiError(400, "You already have an active quiz. Please complete or exit it first.");
         }
     }
+
+    // Deduct 1 coin for starting a quiz
+    await User.findByIdAndUpdate(userId, { $inc: { coins: -1 } });
 
     // Randomly select ONE cricketer to start (endless mode)
     const cricketers = await Cricketer.aggregate([
@@ -166,9 +175,6 @@ module.exports.submitGuess = asyncHandler(async (req, res) => {
         currentRound.scoreAwarded = score;
         quizSession.totalScore += score;
 
-        // Move to next round - In endless mode, add a new random cricketer
-        quizSession.moveToNextRound();
-        
         // Get a random cricketer for next round (exclude recently played ones)
         const recentCricketerIds = quizSession.rounds.slice(-5).map(r => r.cricketerId);
         const nextCricketers = await Cricketer.aggregate([
@@ -189,7 +195,7 @@ module.exports.submitGuess = asyncHandler(async (req, res) => {
                 { $sample: { size: 1 } }
             ]))[0];
 
-        // Add new round
+        // Add new round FIRST, then move to it
         quizSession.rounds.push({
             cricketerId: nextCricketer._id,
             attemptsUsed: 0,
@@ -199,6 +205,9 @@ module.exports.submitGuess = asyncHandler(async (req, res) => {
             scoreAwarded: 0,
             guesses: []
         });
+
+        // Now move to the newly added round (endless mode - never completes on correct guess)
+        quizSession.currentRoundIndex++;
 
         await quizSession.save();
 

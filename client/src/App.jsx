@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Profile from './pages/Profile'
 import Quiz from './pages/Quiz'
+import Leaderboard from './pages/Leaderboard'
 import CheckEmail from './pages/CheckEmail'
 import EmailVerified from './pages/EmailVerified'
 
@@ -17,6 +18,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/check-email" element={<CheckEmail />} />
           <Route path="/email-verified" element={<EmailVerified />} />
           <Route
