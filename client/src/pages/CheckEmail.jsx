@@ -1,12 +1,37 @@
 import { useLocation, Link } from 'react-router-dom'
 import { useState } from 'react'
-import api from '../services/api'
+import { useNavigate } from 'react-router-dom'
+import { resendVerificationOtp, verifyEmailOtp } from '../services/api'
 
 function CheckEmail() {
   const location = useLocation()
+  const navigate = useNavigate()
   const email = location.state?.email || ''
+  const [otp, setOtp] = useState('')
+  const [verifying, setVerifying] = useState(false)
   const [resending, setResending] = useState(false)
   const [message, setMessage] = useState('')
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault()
+    if (!email || !otp) return
+
+    setVerifying(true)
+    setMessage('')
+
+    try {
+      const response = await verifyEmailOtp({ email, otp })
+      if (response.data.success) {
+        navigate('/email-verified', {
+          state: { username: response.data?.data?.username }
+        })
+      }
+    } catch (error) {
+      setMessage(error.response?.data?.message || 'Failed to verify OTP')
+    } finally {
+      setVerifying(false)
+    }
+  }
 
   const handleResend = async () => {
     if (!email) return
@@ -14,12 +39,12 @@ function CheckEmail() {
     setMessage('')
 
     try {
-      const response = await api.post('/users/resend-verification', { email })
+      const response = await resendVerificationOtp({ email })
       if (response.data.success) {
-        setMessage('Verification email sent!')
+        setMessage('Verification OTP sent!')
       }
     } catch (error) {
-      setMessage(error.response?.data?.message || 'Failed to resend email')
+      setMessage(error.response?.data?.message || 'Failed to resend OTP')
     } finally {
       setResending(false)
     }
@@ -30,17 +55,41 @@ function CheckEmail() {
       <div className="container">
         <div className="card check-email-card">
           <div className="icon">📧</div>
-          <h1>Check Your Email</h1>
+          <h1>Verify Your Email</h1>
           <p>
-            We've sent a verification link to
+            We've sent a verification OTP to
             {email && <strong> {email}</strong>}
           </p>
           <p className="secondary">
-            Click the link in the email to verify your account. The link expires in 24 hours.
+            Enter the 6-digit OTP from your email. OTP expires in 10 minutes.
           </p>
 
+          {email && (
+            <form onSubmit={handleVerifyOtp}>
+              <div className="form-group" style={{ textAlign: 'left' }}>
+                <label htmlFor="otp">OTP</label>
+                <input
+                  type="text"
+                  id="otp"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Enter 6-digit OTP"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={verifying}
+                className="btn btn-primary"
+                style={{ width: '100%' }}
+              >
+                {verifying ? 'Verifying...' : 'Verify OTP'}
+              </button>
+            </form>
+          )}
+
           {message && (
-            <div className={`alert ${message.includes('sent') ? 'alert-success' : 'alert-error'}`}>
+            <div className={`alert ${message.toLowerCase().includes('sent') ? 'alert-success' : 'alert-error'}`}>
               {message}
             </div>
           )}
@@ -50,8 +99,9 @@ function CheckEmail() {
               onClick={handleResend}
               disabled={resending}
               className="btn btn-secondary"
+              style={{ width: '100%', marginTop: '0.75rem' }}
             >
-              {resending ? 'Sending...' : 'Resend Email'}
+              {resending ? 'Sending...' : 'Resend OTP'}
             </button>
           )}
 

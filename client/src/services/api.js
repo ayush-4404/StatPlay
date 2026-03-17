@@ -39,3 +39,49 @@ api.interceptors.response.use(
 )
 
 export default api
+
+// Admin API functions
+export const addCricketer = (formData) => {
+  return api.post('/admin/cricketers', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+export const getAllCricketers = (params) => {
+  return api.get('/admin/cricketers', { params })
+}
+
+export const updateCricketer = (id, formData) => {
+  return api.patch(`/admin/cricketers/${id}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+export const deleteCricketer = (id) => {
+  return api.delete(`/admin/cricketers/${id}`)
+}
+
+export const toggleCricketerStatus = (id) => {
+  return api.patch(`/admin/cricketers/${id}/toggle-status`)
+}
+
+// Auth OTP API functions
+export const verifyEmailOtp = (payload) => {
+  return api.post('/users/verify-email', payload)
+}
+
+export const resendVerificationOtp = (payload) => {
+  return api.post('/users/resend-verification', payload)
+}
+
+export const requestForgotPasswordOtp = (payload) => {
+  return api.post('/users/forgot-password/request-otp', payload)
+}
+
+export const resetPasswordWithOtp = (payload) => {
+  return api.post('/users/forgot-password/reset', payload)
+}

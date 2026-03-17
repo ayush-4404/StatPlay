@@ -1,8 +1,9 @@
-import { useSearchParams, Link } from 'react-router-dom'
+import { useSearchParams, Link, useLocation } from 'react-router-dom'
 
 function EmailVerified() {
   const [searchParams] = useSearchParams()
-  const username = searchParams.get('username')
+  const location = useLocation()
+  const username = location.state?.username || searchParams.get('username')
 
   return (
     <div className="verified-page">

@@ -26,6 +26,9 @@ function Profile() {
           <Link to="/" className="logo">🏏 StatPlay</Link>
           <div className="nav-links">
             <Link to="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
+            {user?.isAdmin && (
+              <Link to="/admin" className="nav-link">⚙️ Admin</Link>
+            )}
             <Link to="/quiz" className="btn btn-primary">Play Quiz</Link>
             <button onClick={handleLogout} className="btn btn-secondary">Logout</button>
           </div>

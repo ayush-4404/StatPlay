@@ -188,6 +188,9 @@ function Quiz() {
             <Link to="/" className="logo">🏏 StatPlay</Link>
             <div className="nav-right">
               <Link to="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
+              {user?.isAdmin && (
+                <Link to="/admin" className="nav-link">⚙️ Admin</Link>
+              )}
               <span className="coin-badge">🪙 {user?.coins || 0} coins</span>
               <Link to="/profile" className="btn btn-secondary">Profile</Link>
             </div>
@@ -265,6 +268,9 @@ function Quiz() {
             <Link to="/" className="logo">🏏 StatPlay</Link>
             <div className="nav-right">
               <Link to="/leaderboard" className="nav-link">🏆 Leaderboard</Link>
+              {user?.isAdmin && (
+                <Link to="/admin" className="nav-link">⚙️ Admin</Link>
+              )}
               <Link to="/profile" className="btn btn-secondary">Profile</Link>
             </div>
           </div>

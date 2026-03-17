@@ -42,6 +42,9 @@ function Leaderboard() {
         <div className="container navbar-content">
           <Link to="/" className="logo">🏏 StatPlay</Link>
           <div className="nav-links">
+            {user?.isAdmin && (
+              <Link to="/admin" className="nav-link">⚙️ Admin</Link>
+            )}
             <Link to="/quiz" className="btn btn-primary">Play Quiz</Link>
             {user && <Link to="/profile" className="btn btn-secondary">Profile</Link>}
           </div>

@@ -7,7 +7,8 @@ function Register() {
     name: '',
     username: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   })
   const [avatar, setAvatar] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState(null)
@@ -55,6 +56,10 @@ function Register() {
     }
     if (!/[A-Z]/.test(formData.password) || !/[0-9]/.test(formData.password)) {
       setError('Password must contain at least one uppercase letter and one number')
+      return
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
       return
     }
     if (!avatar) {
@@ -172,6 +177,19 @@ function Register() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Min 8 chars, 1 uppercase, 1 number"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="confirmPassword">Confirm Password</label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Re-enter your password"
                 required
               />
             </div>
