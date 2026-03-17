@@ -27,3 +27,15 @@ console.log("Authorization header:", req.headers.authorization);
     }
 
 })
+
+module.exports.verifyAdmin = asyncHandler(async(req, res, next)=>{
+    if(!req.user){
+        throw new ApiError(401, "Unauthorized: Please login first")
+    }
+    
+    if(!req.user.isAdmin){
+        throw new ApiError(403, "Forbidden: Admin access required")
+    }
+    
+    next();
+})

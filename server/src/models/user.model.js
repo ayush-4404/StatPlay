@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
+const crypto = require('crypto');
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -61,6 +62,22 @@ const userSchema = new mongoose.Schema({
     },
     emailVerificationExpiry: {
         type: Date
+    },
+    emailVerificationOtp: {
+        type: String
+    },
+    emailVerificationOtpExpiry: {
+        type: Date
+    },
+    resetPasswordOtp: {
+        type: String
+    },
+    resetPasswordOtpExpiry: {
+        type: Date
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true }
 );
@@ -103,7 +120,6 @@ userSchema.methods.generateRefreshToken = async function () {
 }
 
 userSchema.methods.generateEmailVerificationToken = function () {
-    const crypto = require('crypto');
     const token = crypto.randomBytes(32).toString('hex');
     this.emailVerificationToken = crypto
         .createHash('sha256')
@@ -112,6 +128,30 @@ userSchema.methods.generateEmailVerificationToken = function () {
     this.emailVerificationExpiry = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
     return token;
 }
+
+userSchema.methods.generateOtp = function () {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+userSchema.methods.generateEmailVerificationOtp = function () {
+    const otp = this.generateOtp();
+    this.emailVerificationOtp = crypto
+        .createHash('sha256')
+        .update(otp)
+        .digest('hex');
+    this.emailVerificationOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    return otp;
+};
+
+userSchema.methods.generateResetPasswordOtp = function () {
+    const otp = this.generateOtp();
+    this.resetPasswordOtp = crypto
+        .createHash('sha256')
+        .update(otp)
+        .digest('hex');
+    this.resetPasswordOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
+    return otp;
+};
 
 // // Remove sensitive fields when converting to JSON
 // userSchema.methods.toJSON = function() {

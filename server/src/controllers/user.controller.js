@@ -6,6 +6,92 @@ const ApiResponse = require("../utils/ApiResponse");
 const sendEmail = require("../utils/sendEmail");
 const crypto = require('crypto');
 
+const emailVerificationTemplate = (name, otp) => `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .otp-box {
+                text-align: center;
+                font-size: 32px;
+                letter-spacing: 6px;
+                padding: 14px;
+                margin: 16px 0;
+                border-radius: 6px;
+                background: #ffffff;
+                border: 1px solid #d9d9d9;
+                font-weight: 700;
+            }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Email Verification</h1>
+            </div>
+            <div class="content">
+                <h2>Hello ${name}!</h2>
+                <p>Use this OTP to verify your StatPlay account:</p>
+                <div class="otp-box">${otp}</div>
+                <p><strong>This OTP expires in 10 minutes.</strong></p>
+                <p>If you did not request this, please ignore this email.</p>
+            </div>
+            <div class="footer">
+                <p>&copy; 2026 Cricket Quiz App. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+`;
+
+const forgotPasswordTemplate = (name, otp) => `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #1e88e5; color: white; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .otp-box {
+                text-align: center;
+                font-size: 32px;
+                letter-spacing: 6px;
+                padding: 14px;
+                margin: 16px 0;
+                border-radius: 6px;
+                background: #ffffff;
+                border: 1px solid #d9d9d9;
+                font-weight: 700;
+            }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Password Reset OTP</h1>
+            </div>
+            <div class="content">
+                <h2>Hello ${name}!</h2>
+                <p>Use this OTP to reset your StatPlay password:</p>
+                <div class="otp-box">${otp}</div>
+                <p><strong>This OTP expires in 10 minutes.</strong></p>
+                <p>If you did not request this reset, please secure your account.</p>
+            </div>
+            <div class="footer">
+                <p>&copy; 2026 Cricket Quiz App. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+`;
+
 const generateTokens = async(userId)=>{
     try{
         const user = await userModel.findById(userId)
@@ -62,7 +148,7 @@ module.exports.registerUser = asyncHandler(async (req, res) => {
         );
     }
     const existingUser = await userModel.findOne({
-        $or: [{ normalizedEmail }, { normalizedUsername }]
+        $or: [{ email: normalizedEmail }, { username: normalizedUsername }]
     });
 
     if (existingUser) {
@@ -95,74 +181,24 @@ module.exports.registerUser = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Something went wrong while registering the user")
     }
 
-    // Generate email verification token
-    const verificationToken = user.generateEmailVerificationToken();
+    // Generate email verification OTP
+    const verificationOtp = user.generateEmailVerificationOtp();
     await user.save({ validateBeforeSave: false });
-
-    // Create verification URL
-    const verificationUrl = `${req.protocol}://${req.get('host')}/api/v1/users/verify-email/${verificationToken}`;
-
-    // Email HTML content
-    const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
-                .content { padding: 20px; background-color: #f9f9f9; }
-                .button { 
-                    display: inline-block; 
-                    padding: 12px 24px; 
-                    background-color: #4CAF50; 
-                    color: white; 
-                    text-decoration: none; 
-                    border-radius: 5px; 
-                    margin: 20px 0;
-                }
-                .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>Welcome to StatPlay!</h1>
-                </div>
-                <div class="content">
-                    <h2>Hello ${name}!</h2>
-                    <p>Thank you for registering with StatPlay. Please verify your email address to complete your registration.</p>
-                    <p>Click the button below to verify your email:</p>
-                    <div style="text-align: center;">
-                        <a href="${verificationUrl}" class="button">Verify Email</a>
-                    </div>
-                    <p>Or copy and paste this link in your browser:</p>
-                    <p style="word-break: break-all;">${verificationUrl}</p>
-                    <p><strong>This link will expire in 24 hours.</strong></p>
-                    <p>If you didn't create an account, please ignore this email.</p>
-                </div>
-                <div class="footer">
-                    <p>&copy; 2026 Cricket Quiz App. All rights reserved.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
 
     // Send verification email
     let emailSent = false;
     try {
         await sendEmail({
             email: user.email,
-            subject: 'Email Verification - StatPlay',
-            html: htmlContent
+            subject: 'Email Verification OTP - StatPlay',
+            html: emailVerificationTemplate(user.name, verificationOtp)
         });
         emailSent = true;
     } catch (error) {
         // Log error but don't fail registration - allows development without email
         console.error('Email sending failed:', error.message);
-        user.emailVerificationToken = undefined;
-        user.emailVerificationExpiry = undefined;
+        user.emailVerificationOtp = undefined;
+        user.emailVerificationOtpExpiry = undefined;
         user.isEmailVerified = true; // Auto-verify when email unavailable
         await user.save({ validateBeforeSave: false });
     }
@@ -175,10 +211,10 @@ module.exports.registerUser = asyncHandler(async (req, res) => {
                 user: createdUser,
                 emailSent,
                 message: emailSent 
-                    ? "Registration successful! Check your email to verify."
+                    ? "Registration successful! Check your email for OTP verification."
                     : "Registration successful! (Email skipped - check server EMAIL config)"
             }, 
-            emailSent ? "Verification email sent." : "Registered without email verification."
+            emailSent ? "Verification OTP sent." : "Registered without email verification."
         )
     )
 
@@ -207,10 +243,9 @@ module.exports.loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Email or password incorrect");
   }
 
-  // Temporarily disable email verification for development
-  // if (!user.isEmailVerified) {
-  //   throw new ApiError(403, "Please verify your email before logging in.");
-  // }
+    if (!user.isEmailVerified) {
+        throw new ApiError(403, "Please verify your email with OTP before logging in.");
+    }
 
   const { accessToken, refreshToken } = await generateTokens(user._id);
 
@@ -283,32 +318,38 @@ module.exports.getCurrentUser = asyncHandler(async (req, res) => {
 
 // Verify Email
 module.exports.verifyEmail = asyncHandler(async (req, res) => {
-    const { token } = req.params;
+    const { email, otp } = req.body;
 
-    // Hash the token to compare with stored hash
-    const hashedToken = crypto
+    if (!email || !otp) {
+        throw new ApiError(400, "Email and OTP are required");
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const hashedOtp = crypto
         .createHash('sha256')
-        .update(token)
+        .update(otp)
         .digest('hex');
 
-    // Find user with matching token and non-expired token
     const user = await userModel.findOne({
-        emailVerificationToken: hashedToken,
-        emailVerificationExpiry: { $gt: Date.now() }
+        email: normalizedEmail,
+        emailVerificationOtp: hashedOtp,
+        emailVerificationOtpExpiry: { $gt: Date.now() }
     });
 
     if (!user) {
-        throw new ApiError(400, "Invalid or expired verification token");
+        throw new ApiError(400, "Invalid or expired OTP");
     }
 
-    // Update user verification status
     user.isEmailVerified = true;
     user.emailVerificationToken = undefined;
     user.emailVerificationExpiry = undefined;
+    user.emailVerificationOtp = undefined;
+    user.emailVerificationOtpExpiry = undefined;
     await user.save({ validateBeforeSave: false });
 
-    // Redirect to React email-verified success page
-    return res.redirect(`${process.env.CORS_ORIGIN}/email-verified?username=${user.username}`);
+    return res.status(200).json(
+        new ApiResponse(200, { username: user.username }, "Email verified successfully")
+    );
 });
 
 // Resend Verification Email
@@ -329,71 +370,90 @@ module.exports.resendVerificationEmail = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Email is already verified");
     }
 
-    // Generate new verification token
-    const verificationToken = user.generateEmailVerificationToken();
+    const verificationOtp = user.generateEmailVerificationOtp();
     await user.save({ validateBeforeSave: false });
 
-    // Create verification URL
-    const verificationUrl = `${req.protocol}://${req.get('host')}/api/v1/users/verify-email/${verificationToken}`;
-
-    // Email HTML content
-    const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background-color: #4CAF50; color: white; padding: 20px; text-align: center; }
-                .content { padding: 20px; background-color: #f9f9f9; }
-                .button { 
-                    display: inline-block; 
-                    padding: 12px 24px; 
-                    background-color: #4CAF50; 
-                    color: white; 
-                    text-decoration: none; 
-                    border-radius: 5px; 
-                    margin: 20px 0;
-                }
-                .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>Email Verification</h1>
-                </div>
-                <div class="content">
-                    <h2>Hello ${user.name}!</h2>
-                    <p>You requested a new verification link. Click the button below to verify your email:</p>
-                    <div style="text-align: center;">
-                        <a href="${verificationUrl}" class="button">Verify Email</a>
-                    </div>
-                    <p>Or copy and paste this link in your browser:</p>
-                    <p style="word-break: break-all;">${verificationUrl}</p>
-                    <p><strong>This link will expire in 24 hours.</strong></p>
-                </div>
-                <div class="footer">
-                    <p>&copy; 2026 Cricket Quiz App. All rights reserved.</p>
-                </div>
-            </div>
-        </body>
-        </html>
-    `;
-
-    // Send verification email
     await sendEmail({
         email: user.email,
-        subject: 'Resend Email Verification - StatPlay',
-        html: htmlContent
+        subject: 'Email Verification OTP - StatPlay',
+        html: emailVerificationTemplate(user.name, verificationOtp)
     });
 
-    // Redirect back to check-email page
-    // return res.redirect('/check-email');
-
-    // For API endpoint:
     return res.status(200).json(
-        new ApiResponse(200, {}, "Verification email sent successfully")
+        new ApiResponse(200, {}, "Verification OTP sent successfully")
+    );
+});
+
+module.exports.requestPasswordResetOtp = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+        throw new ApiError(400, "Email is required");
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const user = await userModel.findOne({ email: normalizedEmail });
+
+    if (!user) {
+        throw new ApiError(404, "User with this email does not exist");
+    }
+
+    const resetOtp = user.generateResetPasswordOtp();
+    await user.save({ validateBeforeSave: false });
+
+    await sendEmail({
+        email: user.email,
+        subject: 'Password Reset OTP - StatPlay',
+        html: forgotPasswordTemplate(user.name, resetOtp)
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Password reset OTP sent successfully")
+    );
+});
+
+module.exports.resetPasswordWithOtp = asyncHandler(async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+        throw new ApiError(400, "Email, OTP and new password are required");
+    }
+
+    if (newPassword.length < 8) {
+        throw new ApiError(400, "Password must be at least 8 characters long");
+    }
+
+    if (!/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+        throw new ApiError(
+            400,
+            "Password must contain at least one uppercase letter and one number"
+        );
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    const hashedOtp = crypto
+        .createHash('sha256')
+        .update(otp)
+        .digest('hex');
+
+    const user = await userModel.findOne({
+        email: normalizedEmail,
+        resetPasswordOtp: hashedOtp,
+        resetPasswordOtpExpiry: { $gt: Date.now() }
+    }).select('+password');
+
+    if (!user) {
+        throw new ApiError(400, "Invalid or expired OTP");
+    }
+
+    user.password = newPassword;
+    user.resetPasswordOtp = undefined;
+    user.resetPasswordOtpExpiry = undefined;
+    user.refreshToken = undefined;
+    await user.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, {}, "Password reset successful")
     );
 });
 

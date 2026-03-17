@@ -22,10 +22,12 @@ app.use(cookieParser())
 
 const userRouter = require("./routes/user.routes");
 const quizRouter = require("./routes/quiz.routes");
+const adminRouter = require("./routes/admin.routes");
 
 // API routes
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/quiz", quizRouter);
+app.use("/api/v1/admin", adminRouter);
 
 // Legacy quiz routes (for backward compatibility)
 app.use("/quiz", quizRouter);
